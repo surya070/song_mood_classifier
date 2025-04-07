@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood-Based Playlist Generator</title>
+</head>
+<body>
+    <h2>Welcome, {{ username }}!</h2>
+    {% if username == "Guest" %}
+        <p><a href="/login">Login with Spotify</a></p>
+    {% else %}
+        <form action="/generate_playlist" method="post">
+            <label for="mood">Choose your mood:</label>
+            <select id="mood" name="mood">
+                <option value="happy">Happy</option>
+                <option value="sad">Sad</option>
+                <option value="chill">Chill</option>
+                <option value="energetic">Energetic</option>
+            </select>
+            <button type="submit">Generate Playlist</button>
+        </form>
+    {% endif %}
+</body>
+</html>

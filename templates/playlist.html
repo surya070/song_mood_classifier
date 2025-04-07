@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Mood Playlist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Your {{ mood.capitalize() }} Playlist</h1>
+        <ul>
+            {% for track in tracks %}
+                <li>{{ track.name }} - {{ track.artist }}</li>
+            {% endfor %}
+        </ul>
+        <a href="/">⬅ Back</a>
+    </div>
+</body>
+</html>
