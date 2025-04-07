@@ -4,13 +4,15 @@ import spotipy
 import requests
 import json
 from spotipy.oauth2 import SpotifyOAuth
+import librosa
+import numpy as np
+import tempfile
+import tensorflow as tf
+from services.feature_extractor import extract_features
 
 # Load environment variables
 load_dotenv()
 
-CYANITE_API_KEY = os.getenv("CYANITE_API_KEY")
-# Note: The GraphQL endpoint is defined below but not used in this code.
-# CYANITE_API_URL = "https://api.cyanite.ai/graphql"
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
@@ -66,20 +68,36 @@ def get_recently_played_tracks():
 
     return tracks
 
-def analyze_song_mood(track_url):
-    """Analyze the mood of the track using the Cyanite Public API REST endpoint."""
-    # Use the REST endpoint for track analysis.
-    endpoint = "https://api.cyanite.ai/v1/track"
-    params = {
-        "apikey": CYANITE_API_KEY,
-        "url": track_url
-    }
-    response = requests.get(endpoint, params=params)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error: {response.status_code} - {response.text}")
+def predict_mood(track_url):
+    # Get track info
+    token_info = get_spotify_token()
+    sp = spotipy.Spotify(auth=token_info["access_token"])
+    track_info = sp.track(track_url)
+    preview_url = track_info.get("preview_url")
+    model = tf.keras.models.load_model("models/my_model.keras")
+
+    if not preview_url:
+        print("No preview audio available for this track.")
         return None
+
+    # Download preview audio temporarily
+    response = requests.get(preview_url)
+    with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp:
+        tmp.write(response.content)
+        tmp.flush()
+
+        # Load audio
+        data, sr = librosa.load(tmp.name, duration=28, offset=0.6, mono=True)
+
+        # Extract features
+        features = extract_features(data, sr)
+        features = features.reshape(1, -1, 1)
+
+        # Predict mood
+        prediction = model.predict(features)
+        predicted_class = np.argmax(prediction, axis=1)[0]
+
+        return predicted_class
 
 def get_playlist_for_mood(mood):
     """Filter recently played tracks based on mood using Cyanite API."""
@@ -97,11 +115,8 @@ def get_playlist_for_mood(mood):
             print("URL not found for track", track)
             continue
 
-        mood_analysis = analyze_song_mood(track_url)
-        if mood_analysis:
-            # Debug: print the full response structure to verify keys
-            print("Cyanite response:", json.dumps(mood_analysis, indent=2))
-            analyzed_mood = mood_analysis.get('mood')  # Adjust key extraction as needed
+        analyzed_mood = predict_mood(track_url)
+        if analyzed_mood:
             print("Analyzed mood:", analyzed_mood, "Desired mood:", mood)
             if analyzed_mood == mood:
                 filtered_tracks.append(track)
