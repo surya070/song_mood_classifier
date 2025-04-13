@@ -1,26 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mood-Based Playlist Generator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mood-Based Playlist Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body>
+<body class="index-page">
+  <div class="container">
+    <h1>🎵 Mood-Based Playlist Generator</h1>
     <h2>Welcome, {{ username }}!</h2>
+
     {% if username == "Guest" %}
-        <p><a href="/login">Login with Spotify</a></p>
+      <p><a class="login-button" href="/login">Login with Spotify 🎧</a></p>
     {% else %}
-        <form action="/generate_playlist" method="post">
-            <label for="mood">Choose your mood:</label>
-            <select id="mood" name="mood">
-                <option value="Energetic & Bold">Energetic & Bold</option>
-                <option value="Happy & Playful">Happy & Playful</option>
-                <option value="Melancholic & Reflective">Melancholic & Reflective</option>
-                <option value="Humorous & Quirky">Humorous & Quirky</option>
-                <option value="Intense & Dramatic">Intense & Dramatic</option>
-            </select>
-            <button type="submit">Generate Playlist</button>
-        </form>
+      <form action="/generate_playlist" method="post" class="mood-form">
+        <label for="mood">What's your vibe today? 🎶</label>
+        <select id="mood" name="mood" required>
+          <option value="">-- Select a Mood --</option>
+          <option value="Energetic & Bold">🔥 Energetic & Bold</option>
+          <option value="Happy & Playful">😊 Happy & Playful</option>
+          <option value="Melancholic & Reflective">😔 Melancholic & Reflective</option>
+          <option value="Humorous & Quirky">🤪 Humorous & Quirky</option>
+          <option value="Intense & Dramatic">🎭 Intense & Dramatic</option>
+        </select>
+        <button type="submit" class="generate-btn">Generate Playlist 🎧</button>
+      </form>
     {% endif %}
+  </div>
 </body>
 </html>
