@@ -34,12 +34,14 @@ def callback():
 
 @app.route("/generate_playlist", methods=["POST"])
 def generate_playlist():
+    moods=["Energetic & Bold","Happy & Playful","Melancholic & Reflective","Humorous & Quirky","Intense & Dramatic"]
     mood = request.form.get("mood")
+    mood=moods.index(mood)+1
     if not mood:
         return "Mood not provided.", 400
 
     playlist = get_playlist_for_mood(mood)
-    return render_template("playlist.html", mood=mood, tracks=playlist)
+    return render_template("playlist.html", mood=moods[mood-1], tracks=playlist)
 
 if __name__ == "__main__":
     app.run(debug=True)
