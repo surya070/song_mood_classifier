@@ -45,4 +45,4 @@ def generate_playlist():
     return render_template("playlist.html", mood=moods[mood_index - 1], tracks=tracks)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True)
