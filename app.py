@@ -36,7 +36,7 @@ def callback():
 
 @app.route("/generate_playlist", methods=["POST"])
 def generate_playlist():
-    if "access_token" not in session:
+    if "token_info" not in session:
         return redirect(url_for("login"))
 
     moods = ["Energetic & Bold", "Happy & Playful", "Melancholic & Reflective", "Humorous & Quirky", "Intense & Dramatic"]

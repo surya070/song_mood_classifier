@@ -8,6 +8,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from services.feature_extractor import extract_features
+from flask import session
 
 load_dotenv()
 
@@ -24,8 +25,19 @@ def create_spotify_oauth():
         client_secret=SPOTIFY_CLIENT_SECRET,
         redirect_uri=SPOTIFY_REDIRECT_URI,
         scope="user-read-recently-played user-read-private playlist-read-private user-library-read",
-        cache_path=None  # Disable file-based caching
+        cache_path=None  # We're handling tokens manually
     )
+
+def refresh_token():
+    sp_oauth = create_spotify_oauth()
+    token_info = session.get("token_info", None)
+
+    if token_info:
+        if sp_oauth.is_token_expired(token_info):
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+            session["token_info"] = token_info
+            session["access_token"] = token_info["access_token"]
+    return session.get("access_token")
 
 def get_user_info(access_token):
     sp = spotipy.Spotify(auth=access_token)
@@ -84,10 +96,10 @@ def predict_mood(track_url, model):
         except:
             pass
 
-def get_playlist_for_mood(mood, access_token):
+def get_playlist_for_mood(mood, _):
+    access_token = refresh_token()
     model = tf.keras.models.load_model("models/my_model.keras")
-    
-    # Get the list of recently played tracks
+
     tracks = get_recently_played_tracks(access_token)
     if not tracks:
         return []
@@ -96,21 +108,15 @@ def get_playlist_for_mood(mood, access_token):
     sp = spotipy.Spotify(auth=access_token)
 
     for track in tracks:
-        # Fetch the track's Spotify URL
         track_url = sp.track(track["id"]).get("external_urls", {}).get("spotify")
         if not track_url:
-            print(f"Skipping track {track['name']} by {track['artist']} as it has no Spotify URL.")
             continue
-        
-        print(f"Analyzing: {track['name']} by {track['artist']}")
 
-        # Predict the mood for the track
+        print(f"Analyzing: {track['name']} by {track['artist']}")
         analyzed = predict_mood(track_url, model)
         print(f"Analyzed mood: {analyzed}, Desired mood: {mood}")
-        # Check if the analyzed mood matches the desired mood
         if analyzed == mood:
-            track["url"] = track_url  # Add the URL to the track for rendering
+            track["url"] = track_url
             filtered.append(track)
 
-    # Return filtered tracks or all tracks if no matches are found
     return filtered if filtered else tracks
