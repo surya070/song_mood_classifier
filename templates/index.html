@@ -8,14 +8,17 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="index-page">
-  <div class="container">
+  <div id="loader" class="loader-wrapper">
+    <div class="loader">🎵 Loading your vibe...</div>
+  </div>
+  <div class="container" style="display:none;" id="mainContent">
     <h1>🎵 Mood-Based Playlist Generator</h1>
     <h2>Welcome, {{ username }}!</h2>
 
     {% if username == "Guest" %}
       <p><a class="login-button" href="/login">Login with Spotify 🎧</a></p>
     {% else %}
-      <form action="/generate_playlist" method="post" class="mood-form">
+      <form action="/generate_playlist" method="post" class="mood-form" onsubmit="showLoading()">
         <label for="mood">What's your vibe today? 🎶</label>
         <select id="mood" name="mood" required>
           <option value="">-- Select a Mood --</option>
@@ -29,5 +32,17 @@
       </form>
     {% endif %}
   </div>
+
+  <script>
+    window.addEventListener("load", function() {
+      document.getElementById("loader").style.display = "none";
+      document.getElementById("mainContent").style.display = "block";
+    });
+
+    function showLoading() {
+      document.getElementById("mainContent").style.display = "none";
+      document.getElementById("loader").style.display = "flex";
+    }
+  </script>
 </body>
 </html>
