@@ -6,3 +6,5 @@ requests==2.32.3
 python-dotenv==1.1.0
 numpy==2.1.3
 gunicorn==21.2.0
+spotdl
+yt-dlp
