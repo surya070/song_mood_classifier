@@ -1,20 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Mood Playlist</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Mood Playlist</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
-<body>
-    <div class="container">
-        <h1>Your {{ mood.capitalize() }} Playlist</h1>
-        <ul>
-            {% for track in tracks %}
-                <li>{{ track.name }} - {{ track.artist }}</li>
-            {% endfor %}
-        </ul>
-        <a href="/">⬅ Back</a>
-    </div>
+<body class="playlist-page">
+  <div class="container">
+    <h1>🎧 {{ mood.capitalize() }} Playlist</h1>
+    <ul class="track-list">
+      {% for track in tracks %}
+        <li>
+          <a href="{{ track.url }}" class="track-card" target="_blank">
+            <span class="track-name">{{ track.name }}</span>
+            <span class="track-artist">by {{ track.artist }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <a class="back-btn" href="/">⬅ Back to Mood Select</a>
+  </div>
 </body>
 </html>

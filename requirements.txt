@@ -1,4 +1,7 @@
-Flask
-requests
-spotipy
-python-dotenv
+Flask==2.3.2
+tensorflow==2.15.0
+librosa==0.10.1
+spotipy==2.23.0
+requests==2.31.0
+python-dotenv==1.0.1
+numpy==1.24.4

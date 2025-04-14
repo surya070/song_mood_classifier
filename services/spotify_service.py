@@ -1,8 +1,6 @@
 import os
 import time
 import subprocess
-import requests
-import json
 import numpy as np
 import librosa
 import tensorflow as tf
@@ -11,7 +9,6 @@ from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
 from services.feature_extractor import extract_features
 
-# Load environment variables
 load_dotenv()
 
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
@@ -21,143 +18,99 @@ SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-sp_oauth = SpotifyOAuth(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET,
-    redirect_uri=SPOTIFY_REDIRECT_URI,
-    scope="user-read-recently-played user-read-private playlist-read-private user-library-read"
-)
+def create_spotify_oauth():
+    return SpotifyOAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=SPOTIFY_REDIRECT_URI,
+        scope="user-read-recently-played user-read-private playlist-read-private user-library-read",
+        cache_path=None  # Disable file-based caching
+    )
 
-def get_spotify_token():
-    token_info = sp_oauth.get_cached_token()
+def get_user_info(access_token):
+    sp = spotipy.Spotify(auth=access_token)
+    return sp.current_user()["display_name"]
 
-    if token_info and sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-
-    if token_info and 'access_token' in token_info:
-        return token_info
-
-    return None
-
-def get_user_info():
-    token_info = get_spotify_token()
-    if not token_info:
-        return None
-
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    user_data = sp.current_user()
-    return user_data["display_name"]
-
-def get_recently_played_tracks():
-    token_info = get_spotify_token()
-    if not token_info:
-        return []
-
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    try:
-        results = sp.current_user_recently_played(limit=20)
-    except Exception as e:
-        print(f"Error fetching recently played tracks: {e}")
-        return []
-
+def get_recently_played_tracks(access_token):
+    sp = spotipy.Spotify(auth=access_token)
+    results = sp.current_user_recently_played(limit=20)
     tracks = []
-    seen_songs = set()
+    seen = set()
 
     for item in results["items"]:
-        track_name = item["track"]["name"]
-        artist_name = item["track"]["artists"][0]["name"]
-        track_id = item["track"]["id"]
+        track = item["track"]
+        name, artist, track_id = track["name"], track["artists"][0]["name"], track["id"]
 
-        if track_name not in seen_songs:
-            tracks.append({"name": track_name, "artist": artist_name, "id": track_id})
-            seen_songs.add(track_name)
-
+        if name not in seen:
+            seen.add(name)
+            tracks.append({"name": name, "artist": artist, "id": track_id})
     return tracks
 
 def download_song_with_spotdl(track_url):
-    """Download song using spotdl and return file path from downloads dir."""
     try:
-        before_download = set(os.listdir(DOWNLOAD_DIR))
-
-        command = [
-            "spotdl", track_url,
-            "--output", f"{DOWNLOAD_DIR}/",
-            "--format", "mp3",
-            "--audio", "youtube-music"
-        ]
+        before = set(os.listdir(DOWNLOAD_DIR))
+        command = ["spotdl", track_url, "--output", DOWNLOAD_DIR, "--format", "mp3", "--audio", "youtube-music"]
         result = subprocess.run(command, capture_output=True, text=True)
 
         if result.returncode != 0:
-            print("spotdl download failed:\n", result.stderr)
+            print("spotdl failed:\n", result.stderr)
             return None
 
-        time.sleep(2)  # wait for filesystem to catch up
+        time.sleep(2)
+        after = set(os.listdir(DOWNLOAD_DIR))
+        new_file = list(after - before)
+        audio_file = next((f for f in new_file if f.endswith((".mp3", ".m4a", ".webm", ".opus"))), None)
 
-        after_download = set(os.listdir(DOWNLOAD_DIR))
-        new_files = after_download - before_download
-        new_audio_files = [f for f in new_files if f.lower().endswith((".mp3", ".m4a", ".webm", ".opus"))]
+        return os.path.join(DOWNLOAD_DIR, audio_file) if audio_file else None
+    except Exception as e:
+        print("Error downloading:", e)
+        return None
 
-        if not new_audio_files:
-            print("No audio file found after spotdl download.")
-            return None
-
-        downloaded_file = os.path.join(DOWNLOAD_DIR, new_audio_files[0])
-        print("Downloaded:", downloaded_file)
-        return downloaded_file
-    except subprocess.CalledProcessError as e:
-        print("spotdl execution failed:", e)
-    return None
-
-def predict_mood(track_url,model):
+def predict_mood(track_url, model):
     audio_path = download_song_with_spotdl(track_url)
     if not audio_path:
-        print("Could not download track with spotdl.")
         return None
-
     try:
         data, sr = librosa.load(audio_path, duration=28, offset=0.6, mono=True)
-        features = extract_features(data, sr)
-        features = features.reshape(1, -1, 1)
+        features = extract_features(data, sr).reshape(1, -1, 1)
         prediction = model.predict(features)
-        predicted_class = np.argmax(prediction, axis=1)[0]
-        return predicted_class
+        return np.argmax(prediction, axis=1)[0]
     except Exception as e:
-        print("Error processing audio:", e)
+        print("Audio error:", e)
         return None
     finally:
-        # Clean up: Delete the audio file after processing
         try:
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
-                print("Deleted file:", audio_path)
-        except Exception as del_err:
-            print("Error deleting file:", del_err)
+            os.remove(audio_path)
+        except:
+            pass
 
-def get_playlist_for_mood(mood):
-    tracks = get_recently_played_tracks()
+def get_playlist_for_mood(mood, access_token):
+    model = tf.keras.models.load_model("models/my_model.keras")
+    
+    # Get the list of recently played tracks
+    tracks = get_recently_played_tracks(access_token)
     if not tracks:
-        print("No recently played tracks found.")
         return []
 
-    filtered_tracks = []
-
-    token_info = get_spotify_token()
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-
-    model = tf.keras.models.load_model("models/my_model.keras")
+    filtered = []
+    sp = spotipy.Spotify(auth=access_token)
 
     for track in tracks:
-        tr = sp.track(track["id"])
-        track_url = tr.get("external_urls", {}).get("spotify")
+        # Fetch the track's Spotify URL
+        track_url = sp.track(track["id"]).get("external_urls", {}).get("spotify")
         if not track_url:
-            print("URL not found for track:", track)
+            print(f"Skipping track {track['name']} by {track['artist']} as it has no Spotify URL.")
             continue
-
+        
         print(f"Analyzing: {track['name']} by {track['artist']}")
-        analyzed_mood = predict_mood(track_url,model)
-        if analyzed_mood is not None:
-            print("Analyzed mood:", analyzed_mood, "| Desired mood:", mood)
-            if analyzed_mood == mood:
-                filtered_tracks.append(track)
 
-    return filtered_tracks if filtered_tracks else tracks
+        # Predict the mood for the track
+        analyzed = predict_mood(track_url, model)
+        print(f"Analyzed mood: {analyzed}, Desired mood: {mood}")
+        # Check if the analyzed mood matches the desired mood
+        if analyzed == mood:
+            track["url"] = track_url  # Add the URL to the track for rendering
+            filtered.append(track)
+
+    # Return filtered tracks or all tracks if no matches are found
+    return filtered if filtered else tracks
