@@ -55,7 +55,12 @@ def get_recently_played_tracks(access_token):
 
         if name not in seen:
             seen.add(name)
-            tracks.append({"name": name, "artist": artist, "id": track_id})
+            tracks.append({
+                "name": name,
+                "artist": artist,
+                "id": track_id,
+                "url": f"https://open.spotify.com/track/{track_id}"  # add url here
+            })
     return tracks
 
 def download_song_with_spotdl(track_url):
@@ -108,15 +113,12 @@ def get_playlist_for_mood(mood, _):
     sp = spotipy.Spotify(auth=access_token)
 
     for track in tracks:
-        track_url = sp.track(track["id"]).get("external_urls", {}).get("spotify")
-        if not track_url:
-            continue
-
+        track_url = track["url"]
         print(f"Analyzing: {track['name']} by {track['artist']}")
         analyzed = predict_mood(track_url, model)
         print(f"Analyzed mood: {analyzed}, Desired mood: {mood}")
         if analyzed == mood:
-            track["url"] = track_url
             filtered.append(track)
 
+    # If no match found, return all tracks with fallback message
     return filtered if filtered else tracks
