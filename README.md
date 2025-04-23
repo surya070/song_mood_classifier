@@ -5,7 +5,7 @@ The main idea is to help you rediscover songs in your own library based on how y
 
 Here’s how it works:
 
--The app grabs 30-second previews of your recently played tracks using Spotipy and Spotify OAuth.
+-The app grabs 30-second previews of your recently played tracks using Spotipy and SpotD1 libraries.
 
 -Each audio snippet is processed with librosa, where we extract features like MFCCs and apply some augmentations like noise and pitch shifts to make the model more robust.
 
