@@ -24,7 +24,6 @@ def test_callback_invalid_code(client, mocker):
         "app.create_spotify_oauth",
         return_value=mock_spotify_oauth)
 
-
     response = client.get("/callback?code=invalid_code")
     assert response.status_code in (200, 302, 500)
     assert (
