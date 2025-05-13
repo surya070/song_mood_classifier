@@ -12,19 +12,16 @@ load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "your_secret_key_here")
 app.config["SESSION_COOKIE_NAME"] = "Spotify-Login"
 
-
 @app.route("/")
 def home():
     username = session.get("username", "Guest")
     return render_template("index.html", username=username)
-
 
 @app.route("/login")
 def login():
     session.clear()
     auth_url = create_spotify_oauth().get_authorize_url()
     return redirect(auth_url)
-
 
 @app.route("/callback")
 def callback():
@@ -37,15 +34,17 @@ def callback():
         return "Authorization failed. <a href='/login'>Try again</a>"
 
     session["token_info"] = token_info
-    session["access_token"] = token_info["access_token"]
     session["username"] = get_user_info(token_info["access_token"])
     return redirect(url_for("home"))
-
 
 @app.route("/generate_playlist", methods=["POST"])
 def generate_playlist():
     if "token_info" not in session:
         return redirect(url_for("login"))
+
+    access_token = session["token_info"].get("access_token")
+    if not access_token:
+        return "Access token missing. <a href='/login'>Login again</a>", 401
 
     moods = [
         "Energetic & Bold",
@@ -54,12 +53,11 @@ def generate_playlist():
         "Humorous & Quirky",
         "Intense & Dramatic",
     ]
-    mood_index = moods.index(request.form.get("mood")) + 1
-    tracks = get_playlist_for_mood(mood_index, session["access_token"])
-    return render_template(
-        "playlist.html", mood=moods[mood_index-1], tracks=tracks
-    )
+    mood = request.form.get("mood", moods[0])
+    mood_index = moods.index(mood) + 1 if mood in moods else 1
 
+    tracks = get_playlist_for_mood(mood_index, access_token)
+    return render_template("playlist.html", mood=mood, tracks=tracks)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
