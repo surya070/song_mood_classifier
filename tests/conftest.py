@@ -1,8 +1,12 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
-from app import app as flask_app  # Make sure this imports your Flask app correctly
+from app import app as flask_app
+
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    )
+
 
 @pytest.fixture
 def client():

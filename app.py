@@ -12,16 +12,19 @@ load_dotenv()
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "your_secret_key_here")
 app.config["SESSION_COOKIE_NAME"] = "Spotify-Login"
 
+
 @app.route("/")
 def home():
     username = session.get("username", "Guest")
     return render_template("index.html", username=username)
+
 
 @app.route("/login")
 def login():
     session.clear()
     auth_url = create_spotify_oauth().get_authorize_url()
     return redirect(auth_url)
+
 
 @app.route("/callback")
 def callback():
@@ -36,6 +39,7 @@ def callback():
     session["token_info"] = token_info
     session["username"] = get_user_info(token_info["access_token"])
     return redirect(url_for("home"))
+
 
 @app.route("/generate_playlist", methods=["POST"])
 def generate_playlist():
@@ -58,6 +62,7 @@ def generate_playlist():
 
     tracks = get_playlist_for_mood(mood_index, access_token)
     return render_template("playlist.html", mood=mood, tracks=tracks)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
