@@ -21,9 +21,8 @@ def test_callback_invalid_code(client, mocker):
     mock_spotify_oauth = mocker.MagicMock()
     mock_spotify_oauth.get_access_token.return_value = None
     mocker.patch(
-        "app.create_spotify_oauth", 
-        return_value=mock_spotify_oauth
-    )
+        "app.create_spotify_oauth",
+        return_value=mock_spotify_oauth)
 
 
     response = client.get("/callback?code=invalid_code")
